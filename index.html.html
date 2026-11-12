@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-950 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>⚔️ ผู้กล้าตะลุยแดนคำถาม - Hero Quiz Battle RPG</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,600;0,700;0,800;0,900;1,400&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        * {
+            font-family: 'Prompt', 'Fredoka', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .glass-card-light {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Glowing Text & Shadows */
+        .glow-title {
+            text-shadow: 0 0 20px rgba(168, 85, 247, 0.6), 0 0 40px rgba(236, 72, 153, 0.4);
+        }
+
+        .glow-gold {
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.7);
+        }
+
+        /* Hero Floating Animation */
+        @keyframes heroFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(1deg); }
+        }
+
+        .animate-float {
+            animation: heroFloat 3s infinite ease-in-out;
+        }
+
+        /* Player Attack Animation */
+        @keyframes playerAttackAnim {
+            0% { transform: translateX(0) scale(1); }
+            30% { transform: translateX(70px) scale(1.2) rotate(12deg); }
+            100% { transform: translateX(0) scale(1); }
+        }
+
+        .anim-player-attack {
+            animation: playerAttackAnim 0.45s ease-in-out;
+        }
+
+        /* Monster Attack Animation */
+        @keyframes monsterAttackAnim {
+            0% { transform: translateX(0) scale(1); }
+            30% { transform: translateX(-70px) scale(1.2) rotate(-12deg); }
+            100% { transform: translateX(0) scale(1); }
+        }
+
+        .anim-monster-attack {
+            animation: monsterAttackAnim 0.45s ease-in-out;
+        }
+
+        /* Hurt Shake Animation */
+        @keyframes hurtShakeAnim {
+            0%, 100% { transform: translateX(0) rotate(0); filter: brightness(1); }
+            20% { transform: translateX(-14px) rotate(-6deg); filter: brightness(2) drop-shadow(0 0 12px red); }
+            40% { transform: translateX(14px) rotate(6deg); filter: brightness(2) drop-shadow(0 0 12px red); }
+            60% { transform: translateX(-8px) rotate(-3deg); filter: brightness(1.5); }
+            80% { transform: translateX(8px) rotate(3deg); filter: brightness(1.2); }
+        }
+
+        .anim-hurt {
+            animation: hurtShakeAnim 0.5s ease-in-out;
+        }
+
+        /* Floating Damage Text */
+        @keyframes popDamageText {
+            0% { opacity: 0; transform: translateY(0) scale(0.5); }
+            30% { opacity: 1; transform: translateY(-25px) scale(1.4); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1); }
+        }
+
+        .damage-popup {
+            animation: popDamageText 0.85s ease-out forwards;
+        }
+
+        /* HP Smooth Transition */
+        .hp-bar-fill {
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Background Particle Stars */
+        .bg-starfield {
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.8), rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.6), rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.9), rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 160px 120px, rgba(255, 255, 255, 0.7), rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+        }
+    </style>
+</head>
+<body class="w-full h-full bg-slate-950 text-white flex flex-col justify-between overflow-hidden bg-starfield relative">
+
+    <!-- TOP NAVIGATION HUD -->
+    <header class="w-full p-3 sm:p-4 z-20 flex justify-between items-center max-w-4xl mx-auto">
+        <!-- Stage / Round Indicator -->
+        <div class="glass-card px-4 py-2 rounded-2xl flex items-center space-x-2 border-purple-500/30">
+            <span class="text-xl">🗺️</span>
+            <div>
+                <div class="text-[10px] text-purple-300 font-bold uppercase tracking-widest">ด่านที่</div>
+                <div id="stageText" class="text-base sm:text-lg font-black text-amber-300 leading-none">1 / 5</div>
+            </div>
+        </div>
+
+        <!-- Score & Combo Badges -->
+        <div class="flex items-center space-x-3">
+            <div id="comboBadge" class="hidden glass-card px-3 py-1.5 rounded-xl border-amber-400/50 text-amber-300 font-black text-xs sm:text-sm animate-bounce">
+                🔥 Combo x<span id="comboCount">1</span>
+            </div>
+            
+            <div class="glass-card px-4 py-2 rounded-2xl flex items-center space-x-2 border-emerald-500/30">
+                <span class="text-xl">⭐</span>
+                <div>
+                    <div class="text-[10px] text-emerald-300 font-bold uppercase tracking-widest">คะแนน</div>
+                    <div id="scoreText" class="text-base sm:text-lg font-black text-emerald-400 leading-none">0</div>
+                </div>
+            </div>
+
+            <!-- Audio Toggle -->
+            <button id="btnMute" class="glass-card w-10 h-10 rounded-2xl flex items-center justify-center text-lg hover:bg-slate-800 transition active:scale-95">
+                🔊
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN BATTLE ARENA -->
+    <main class="w-full max-w-4xl mx-auto px-4 flex-1 flex flex-col justify-center items-center relative z-10">
+
+        <!-- Floating Damage Overlay Container -->
+        <div id="damageOverlay" class="absolute inset-0 pointer-events-none z-30"></div>
+
+        <div class="w-full grid grid-cols-2 gap-3 sm:gap-8 items-center my-auto">
+            
+            <!-- LEFT: PLAYER CARD -->
+            <div id="playerCard" class="glass-card rounded-3xl p-4 sm:p-6 flex flex-col items-center relative border-cyan-500/30 shadow-xl shadow-cyan-950/40">
+                <!-- HP Bar -->
+                <div class="w-full mb-3">
+                    <div class="flex justify-between items-center text-xs font-bold mb-1">
+                        <span id="playerName" class="text-cyan-300 truncate max-w-[100px] sm:max-w-none">ผู้กล้าจอมเวท</span>
+                        <span id="playerHpText" class="text-slate-300">100/100</span>
+                    </div>
+                    <div class="w-full h-3 sm:h-4 bg-slate-900/80 rounded-full p-0.5 border border-slate-700 overflow-hidden">
+                        <div id="playerHpBar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full hp-bar-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Player Avatar Container -->
+                <div class="relative my-2 sm:my-4 flex items-center justify-center">
+                    <div class="absolute inset-0 bg-cyan-500/20 rounded-full blur-xl"></div>
+                    <div id="playerAvatar" class="text-6xl sm:text-8xl cursor-pointer hover:scale-105 transition-transform duration-200 animate-float relative z-10 filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                        🧙‍♂️
+                    </div>
+                </div>
+
+                <div class="text-[11px] sm:text-xs font-bold text-cyan-400/80 bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-800/40">
+                    🛡️ ผู้กล้า
+                </div>
+            </div>
+
+            <!-- RIGHT: MONSTER CARD -->
+            <div id="monsterCard" class="glass-card rounded-3xl p-4 sm:p-6 flex flex-col items-center relative border-rose-500/30 shadow-xl shadow-rose-950/40">
+                <!-- HP Bar -->
+                <div class="w-full mb-3">
+                    <div class="flex justify-between items-center text-xs font-bold mb-1">
+                        <span id="monsterName" class="text-rose-300 truncate max-w-[100px] sm:max-w-none">สไลม์จอมกวน</span>
+                        <span id="monsterHpText" class="text-slate-300">100/100</span>
+                    </div>
+                    <div class="w-full h-3 sm:h-4 bg-slate-900/80 rounded-full p-0.5 border border-slate-700 overflow-hidden">
+                        <div id="monsterHpBar" class="h-full bg-gradient-to-r from-rose-500 to-amber-400 rounded-full hp-bar-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Monster Avatar Container -->
+                <div class="relative my-2 sm:my-4 flex items-center justify-center">
+                    <div class="absolute inset-0 bg-rose-500/20 rounded-full blur-xl"></div>
+                    <div id="monsterAvatar" class="text-6xl sm:text-8xl animate-float relative z-10 filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
+                        🟢
+                    </div>
+                </div>
+
+                <div id="monsterTag" class="text-[11px] sm:text-xs font-bold text-rose-400/80 bg-rose-950/60 px-3 py-1 rounded-full border border-rose-800/40">
+                    👹 มอนสเตอร์
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- QUESTION & ANSWERS SECTION -->
+    <footer class="w-full max-w-4xl mx-auto p-4 z-20">
+        <div class="glass-card rounded-3xl p-4 sm:p-6 border-amber-500/20 shadow-2xl space-y-4">
+            
+            <!-- Category Badge & Question Header -->
+            <div class="flex justify-between items-center">
+                <span id="questionCategory" class="text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full">
+                    🧠 ปริศนาเชาวน์ปัญญา
+                </span>
+                <span id="questionCounter" class="text-xs font-extrabold text-slate-400">
+                    คำถามที่ 1/15
+                </span>
+            </div>
+
+            <!-- Question Text -->
+            <div class="min-h-[60px] flex items-center justify-center text-center">
+                <h2 id="questionText" class="text-base sm:text-xl font-bold leading-relaxed text-slate-100">
+                    กำลังโหลดคำถาม...
+                </h2>
+            </div>
+
+            <!-- Feedback / Explanation Banner (Initially Hidden) -->
+            <div id="feedbackBanner" class="hidden text-center py-2 px-4 rounded-xl font-bold text-sm transition-all duration-300">
+                <span id="feedbackText"></span>
+            </div>
+
+            <!-- Answer Options (4 Grid Buttons) -->
+            <div id="optionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                <button class="option-btn glass-card-light hover:bg-slate-800/80 active:scale-98 transition p-3 sm:p-4 rounded-2xl text-left font-semibold text-sm sm:text-base flex items-center space-x-3 border border-slate-700/60 hover:border-amber-400/50">
+                    <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center text-xs border border-amber-500/40">ก</span>
+                    <span class="option-text flex-1">ตัวเลือกที่ 1</span>
+                </button>
+                <button class="option-btn glass-card-light hover:bg-slate-800/80 active:scale-98 transition p-3 sm:p-4 rounded-2xl text-left font-semibold text-sm sm:text-base flex items-center space-x-3 border border-slate-700/60 hover:border-amber-400/50">
+                    <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center text-xs border border-amber-500/40">ข</span>
+                    <span class="option-text flex-1">ตัวเลือกที่ 2</span>
+                </button>
+                <button class="option-btn glass-card-light hover:bg-slate-800/80 active:scale-98 transition p-3 sm:p-4 rounded-2xl text-left font-semibold text-sm sm:text-base flex items-center space-x-3 border border-slate-700/60 hover:border-amber-400/50">
+                    <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center text-xs border border-amber-500/40">ค</span>
+                    <span class="option-text flex-1">ตัวเลือกที่ 3</span>
+                </button>
+                <button class="option-btn glass-card-light hover:bg-slate-800/80 active:scale-98 transition p-3 sm:p-4 rounded-2xl text-left font-semibold text-sm sm:text-base flex items-center space-x-3 border border-slate-700/60 hover:border-amber-400/50">
+                    <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center text-xs border border-amber-500/40">ง</span>
+                    <span class="option-text flex-1">ตัวเลือกที่ 4</span>
+                </button>
+            </div>
+
+        </div>
+    </footer>
+
+    <!-- HERO SELECTION OVERLAY (START GAME) -->
+    <div id="heroSelectOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-card max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center shadow-2xl border-purple-500/30">
+            
+            <div class="inline-block p-4 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-3xl mb-3 shadow-lg shadow-purple-500/30">
+                <span class="text-5xl">⚔️</span>
+            </div>
+
+            <h1 class="text-2xl sm:text-3xl font-black bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 bg-clip-text text-transparent glow-title mb-1">
+                ผู้กล้าตะลุยแดนคำถาม
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-300 mb-6">เลือกผู้กล้าของคุณ แล้วออกไปโจมตีเหล่ามอนสเตอร์ด้วยพลังแห่งปัญญา!</p>
+
+            <!-- Hero Cards Grid -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button class="hero-choice-btn glass-card-light p-3 rounded-2xl border-2 border-cyan-500/50 hover:bg-cyan-500/20 transition flex flex-col items-center" data-hero="wizard">
+                    <span class="text-4xl mb-1">🧙‍♂️</span>
+                    <span class="font-black text-sm text-cyan-300">จอมเวท</span>
+                    <span class="text-[10px] text-slate-400">โจมตีเวทมนตร์รุนแรง</span>
+                </button>
+
+                <button class="hero-choice-btn glass-card-light p-3 rounded-2xl border-2 border-transparent hover:border-amber-400/50 hover:bg-amber-500/20 transition flex flex-col items-center" data-hero="knight">
+                    <span class="text-4xl mb-1">⚔️</span>
+                    <span class="font-black text-sm text-amber-300">อัศวิน</span>
+                    <span class="text-[10px] text-slate-400">ผู้กล้าพลังอึดทรหด</span>
+                </button>
+
+                <button class="hero-choice-btn glass-card-light p-3 rounded-2xl border-2 border-transparent hover:border-emerald-400/50 hover:bg-emerald-500/20 transition flex flex-col items-center" data-hero="ninja">
+                    <span class="text-4xl mb-1">🥷</span>
+                    <span class="font-black text-sm text-emerald-300">นินจา</span>
+                    <span class="text-[10px] text-slate-400">ความเร็วและคริติคอล</span>
+                </button>
+
+                <button class="hero-choice-btn glass-card-light p-3 rounded-2xl border-2 border-transparent hover:border-pink-400/50 hover:bg-pink-500/20 transition flex flex-col items-center" data-hero="archer">
+                    <span class="text-4xl mb-1">🏹</span>
+                    <span class="font-black text-sm text-pink-300">นายพราน</span>
+                    <span class="text-[10px] text-slate-400">แม่นยำไร้พ่าย</span>
+                </button>
+            </div>
+
+            <button id="btnStartGame" class="w-full py-4 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 hover:brightness-110 active:scale-95 text-slate-950 font-black rounded-2xl shadow-xl shadow-purple-500/30 text-lg transition duration-150">
+                🚀 เริ่มการผจญภัย!
+            </button>
+        </div>
+    </div>
+
+    <!-- GAME RESULT OVERLAY (VICTORY / DEFEAT) -->
+    <div id="gameResultOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-card max-w-sm w-full rounded-3xl p-6 sm:p-8 text-center shadow-2xl border-amber-500/30">
+            
+            <div id="resultIconBox" class="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center text-5xl mb-3 shadow-lg">
+                🏆
+            </div>
+
+            <h2 id="resultTitle" class="text-3xl font-black mb-1 glow-gold">ชัยชนะอันยิ่งใหญ่!</h2>
+            <p id="resultSubtext" class="text-xs text-slate-300 mb-6">คุณได้ปราบมอนสเตอร์ทั้งหมดเรียบร้อยแล้ว!</p>
+
+            <div class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 space-y-3 mb-6">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">คะแนนรวม:</span>
+                    <span id="finalScore" class="text-2xl font-black text-amber-400">0</span>
+                </div>
+                <div class="h-px bg-slate-800 w-full"></div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">ตอบถูกทั้งหมด:</span>
+                    <span id="finalAccuracy" class="text-emerald-400 font-bold">0 / 0</span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">ยศผู้กล้า:</span>
+                    <span id="finalRank" class="text-purple-300 font-extrabold">🏆 ตำนานแห่งปัญญา</span>
+                </div>
+            </div>
+
+            <button id="btnRestart" class="w-full py-4 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:brightness-110 active:scale-95 text-slate-950 font-black rounded-2xl shadow-xl shadow-cyan-500/30 text-lg transition duration-150">
+                🔄 เล่นใหม่อีกครั้ง
+            </button>
+        </div>
+    </div>
+
+    <!-- AUDIO SYNTH & GAME LOGIC -->
+    <script>
+        // --- WEB AUDIO API SYNTHESIZER ---
+        class RetroSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            // Player Attack / Hit Sound
+            playAttack() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            // Hurt Sound effect
+            playHurt() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(280, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.25);
+
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            // Correct Answer Chime (Arpeggio)
+            playCorrect() {
+                if (this.muted || !this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.06);
+
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + index * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + index * 0.06 + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(this.ctx.currentTime + index * 0.06);
+                    osc.stop(this.ctx.currentTime + index * 0.06 + 0.2);
+                });
+            }
+
+            // Victory Fanfare
+            playVictory() {
+                if (this.muted || !this.ctx) return;
+                const melody = [
+                    { note: 523.25, duration: 0.15 }, // C5
+                    { note: 659.25, duration: 0.15 }, // E5
+                    { note: 783.99, duration: 0.15 }, // G5
+                    { note: 1046.50, duration: 0.4 }  // C6
+                ];
+                let now = this.ctx.currentTime;
+                melody.forEach(m => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(m.note, now);
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + m.duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + m.duration);
+                    now += m.duration;
+                });
+            }
+
+            // Defeat Sound
+            playDefeat() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.7);
+
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.7);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.7);
+            }
+        }
+
+        const sound = new RetroSoundEngine();
+
+        // --- QUESTION DATABASE ---
+        const QUESTION_DATABASE = [
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "อะไรเอ่ย... ยิ่งตัด ยิ่งยาว?",
+                options: ["ถนน", "กรรไกร", "เส้นผม", "เชือก"],
+                answer: 0,
+                explain: "ถนน! เพราะการตัดถนนเพิ่ม จะทำให้ระยะทางยาวขึ้นนั่นเอง"
+            },
+            {
+                category: "🌍 ความรู้รอบตัว",
+                question: "สัตว์ชนิดใดบินไม่ได้ แต่วิ่งได้เร็วที่สุดในโลก?",
+                options: ["นกกระจอกเทศ", "เสือชีตาห์", "เพนกวิน", "จิงโจ้"],
+                answer: 0,
+                explain: "นกกระจอกเทศเป็นนกที่วิ่งเร็วที่สุดในโลก (สูงสุดราว 70 กม./ชม.)"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "คนสร้างไม่ได้ใช้ คนใช้ไม่ได้ซื้อ คนซื้อไม่ได้ใช้... สิ่งนั้นคืออะไร?",
+                options: ["โลงศพ", "บ้าน", "ยารักษาโรค", "รองเท้า"],
+                answer: 0,
+                explain: "โลงศพ! คนซื้อซื้อให้ผู้อื่นใช้ คนสร้างก็ไม่ได้ใช้เอง"
+            },
+            {
+                category: "🇹🇭 ภาษาไทยน่ารู้",
+                question: "จังหวัดใดในประเทศไทยที่ไม่มีภูเขาเลยแม้แต่ลูกเดียว?",
+                options: ["สมุทรปราการ", "เชียงใหม่", "กาญจนบุรี", "นครราชสีมา"],
+                answer: 0,
+                explain: "สมุทรปราการ อยู่ในบริเวณที่ราบลุ่มแม่น้ำเจ้าพระยาตอนล่าง ไม่มีภูเขาเลย"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "อะไรเอ่ย... มี 4 ขา เดินได้ แต่พูดไม่ได้และกินอาหารไม่ได้?",
+                options: ["โต๊ะ", "สุนัข", "แมว", "เก้าอี้ซักผ้า"],
+                answer: 0,
+                explain: "โต๊ะ หรือ เก้าอี้ มี 4 ขาแต่เป็นสิ่งของไร้ชีวิต"
+            },
+            {
+                category: "🔬 วิทยาศาสตร์",
+                question: "ดาวเคราะห์ดวงใดในระบบสุริยะได้ชื่อว่า 'ดาวเคราะห์สีน้ำเงิน'?",
+                options: ["โลก", "ดาวอังคาร", "ดาวพุธ", "ดาวเสาร์"],
+                answer: 0,
+                explain: "โลก! มองจากอวกาศเห็นเป็นสีน้ำเงินเนื่องจากมีมหาสมุทรครอบคลุม 70%"
+            },
+            {
+                category: "🐾 สัตว์โลกน่ารัก",
+                question: "สัตว์ชนิดใดสามารถหลับตาข้างเดียวเวลาว่ายน้ำหรือนอนพักผ่อน?",
+                options: ["โลมา", "ฉลาม", "เต่าทะเล", "ปลาทอง"],
+                answer: 0,
+                explain: "โลมาพักผ่อนสมองทีละซีก จึงหลับตาข้างเดียวเพื่อระวังภัยตลอดเวลา"
+            },
+            {
+                category: "🍏 อาหารและธรรมชาติ",
+                question: "ผลไม้ชนิดใดมีเมล็ดเกาะอยู่นอกผล?",
+                options: ["สตรอว์เบอร์รี", "แอปเปิ้ล", "กล้วย", "ส้ม"],
+                answer: 0,
+                explain: "สตรอว์เบอร์รี! จุดเล็กๆ รอบนอกคือผลแท้ที่มีเมล็ดอยู่ข้างใน"
+            },
+            {
+                category: "🧠 ปริศนาฮาเฮ",
+                question: "อะไรเอ่ย... เดินถอยหลังตลอดเวลาขณะทำงาน?",
+                options: ["กบเหลาดินสอ", "นาฬิกาเรือนโบราณ", "ยางลบ", "รถไถดิน"],
+                answer: 0,
+                explain: "กบเหลาดินสอมือหมุน! เวลาเหลาจะถอยหลังเข้าหาตัว"
+            },
+            {
+                category: "🔬 วิทยาศาสตร์",
+                question: "ธาตุที่มีปริมาณมากที่สุดในบรรยากาศของโลกคือธาตุใด?",
+                options: ["ไนโตรเจน", "ออกซิเจน", "คาร์บอนไดออกไซด์", "ไฮโดรเจน"],
+                answer: 0,
+                explain: "ไนโตรเจนมีมากถึงประมาณ 78% ของบรรยากาศโลก"
+            },
+            {
+                category: "🐾 สัตว์โลกน่ารู้",
+                question: "สัตว์ชนิดใดอวัยวะหัวใจตั้งไว้อยู่บริเวณส่วนหัว?",
+                options: ["กุ้ง", "ปู", "ปลาหมึก", "หอยเชลล์"],
+                answer: 0,
+                explain: "กุ้ง! หัวใจของกุ้งตั้งอยู่ในส่วนหัวและอก (Cephalothorax)"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "อะไรเอ่ย... มีหน้าแต่ไม่มีตา มีมือแต่ไม่มีนิ้ว?",
+                options: ["นาฬิกา", "หุ่นยนต์", "กระจกเงา", "รูปถ่าย"],
+                answer: 0,
+                explain: "นาฬิกา! มีหน้าปัด (Face) และเข็มนาฬิกา (Hands)"
+            },
+            {
+                category: "🧮 คณิตศาสตร์",
+                question: "ถ้าคุณมีส้ม 5 ผล แล้วคุณหยิบออกไป 3 ผล คุณจะเหลือส้มกี่ผล?",
+                options: ["3 ผล", "2 ผล", "5 ผล", "0 ผล"],
+                answer: 0,
+                explain: "เหลือ 3 ผล! เพราะเป็นส้ม 3 ผลที่คุณหยิบออกมาไว้ในมือคุณเอง"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "อะไรเอ่ย... มีขึ้นมีลงตลอดเวลา แต่ไม่เคยเคลื่อนที่ไปไหน?",
+                options: ["บันได", "ลิฟต์", "เครื่องบิน", "ลูกโป่ง"],
+                answer: 0,
+                explain: "บันได! ตัวบันไดอยู่กับที่ แต่มนุษย์ใช้ก้าวขึ้นก้าวลง"
+            },
+            {
+                category: "🌍 ความรู้รอบตัว",
+                question: "แม่น้ำสายที่ยาวที่สุดในโลกคือแม่น้ำสายใด?",
+                options: ["แม่น้ำไนล์", "แม่น้ำอเมซอน", "แม่น้ำโขง", "แม่น้ำแยงซี"],
+                answer: 0,
+                explain: "แม่น้ำไนล์ ในทวีปแอฟริกา ยาวประมาณ 6,650 กิโลเมตร"
+            },
+            {
+                category: "🧮 คณิตศาสตร์",
+                question: "ผลคูณของ 12 × 12 มีค่าเท่ากับเท่าใด?",
+                options: ["144", "124", "136", "148"],
+                answer: 0,
+                explain: "12 คูณ 12 ได้เท่ากับ 144"
+            },
+            {
+                category: "🔬 วิทยาศาสตร์",
+                question: "ก๊าซชนิดใดที่พืชดูดซับใช้ในการสร้างอาหาร (สังเคราะห์ด้วยแสง)?",
+                options: ["คาร์บอนไดออกไซด์", "ออกซิเจน", "ไนโตรเจน", "ฮีเลียม"],
+                answer: 0,
+                explain: "พืชดูดซับก๊าซคาร์บอนไดออกไซด์และปล่อยก๊าซออกซิเจนออกมา"
+            },
+            {
+                category: "🇹🇭 ภาษาไทยน่ารู้",
+                question: "จังหวัดใดในประเทศไทยที่มีพื้นที่กว้างใหญ่ที่สุด?",
+                options: ["นครราชสีมา", "เชียงใหม่", "กาญจนบุรี", "ตาก"],
+                answer: 0,
+                explain: "จังหวัดนครราชสีมา มีพื้นที่กว้างใหญ่ที่สุดในประเทศไทย"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "อะไรเอ่ย... ยิ่งไหว้ ยิ่งสั้น?",
+                options: ["ธูป", "เทียน", "เชือก", "เส้นผม"],
+                answer: 0,
+                explain: "ธูป! เพราะเมื่อจุดไหว้แล้ว ธูปจะค่อยๆ ไหม้และสั้นลงเรื่อยๆ"
+            },
+            {
+                category: "🐾 สัตว์โลกน่ารู้",
+                question: "นกชนิดใดเป็นสายพันธุ์เดียวในโลกที่สามารถบินถอยหลังได้?",
+                options: ["นกฮัมมิ่งเบิร์ด", "นกนางแอ่น", "นกแก้ว", "นกอินทรี"],
+                answer: 0,
+                explain: "นกฮัมมิ่งเบิร์ด สามารถขยับปีกได้รอบทิศทางจนบินถอยหลังและบินนิ่งได้"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "เดือนไหนใน 1 ปีที่มี 28 วัน?",
+                options: ["ทุกเดือน", "กุมภาพันธ์เท่านั้น", "มกราคม", "เมษายน"],
+                answer: 0,
+                explain: "ทุกเดือน! เพราะทุกเดือนต่างก็มีอย่างน้อย 28 วันขึ้นไป"
+            },
+            {
+                category: "🧮 คณิตศาสตร์",
+                question: "ถ้าครึ่งหนึ่งของ 24 บวกกับ 6 จะได้ผลลัพธ์เท่าใด?",
+                options: ["18", "16", "20", "12"],
+                answer: 0,
+                explain: "ครึ่งหนึ่งของ 24 คือ 12 เมื่อบวกอีก 6 จะได้เท่ากับ 18"
+            },
+            {
+                category: "🔬 วิทยาศาสตร์",
+                question: "อวัยวะใดในร่างกายมนุษย์ที่ทำหน้าที่กรองของเสียและผลิตปัสสาวะ?",
+                options: ["ไต", "ตับ", "ปอด", "หัวใจ"],
+                answer: 0,
+                explain: "ไต ทำหน้าที่กรองของเสียออกจากเลือดและขับออกทางปัสสาวะ"
+            },
+            {
+                category: "🌍 ความรู้รอบตัว",
+                question: "ธงชาติของประเทศใดในโลกที่ไม่ใช่รูปทรงสี่เหลี่ยม?",
+                options: ["เนปาล", "สวิตเซอร์แลนด์", "ญี่ปุ่น", "บรูไน"],
+                answer: 0,
+                explain: "ธงชาติเนปาล มีลักษณะเป็นรูปสามเหลี่ยมสองรูปซ้อนกัน"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "อะไรเอ่ย... ยิ่งอยู่นาน ยิ่งตัวสั้นลง?",
+                options: ["เทียนไข", "ต้นไม้", "เงา", "สะพาน"],
+                answer: 0,
+                explain: "เทียนไข! เมื่อจุดใช้งานไปเรื่อยๆ เนื้อเทียนจะละลายและสั้นลง"
+            },
+            {
+                category: "🇹🇭 ภาษาไทยน่ารู้",
+                question: "วรรณคดีเรื่อง 'พระอภัยมณี' เป็นผลงานการแต่งของกวีเอกท่านใด?",
+                options: ["สุนทรภู่", "พระบาทสมเด็จพระพุทธเลิศหล้านภาลัย", "ศรีปราชญ์", "เจ้าพระยาพระคลัง (หน)"],
+                answer: 0,
+                explain: "สุนทรภู่ กวีเอกแห่งรัตนโกสินทร์ เป็นผู้ประพันธ์เรื่องพระอภัยมณี"
+            },
+            {
+                category: "🧮 คณิตศาสตร์",
+                question: "มุมที่มีขนาดเท่ากับ 90 องศา พอดีเรียกว่ามุมอะไร?",
+                options: ["มุมฉาก", "มุมแหลม", "มุมป้าน", "มุมตรง"],
+                answer: 0,
+                explain: "มุม 90 องศา เรียกว่า มุมฉาก"
+            },
+            {
+                category: "🔬 วิทยาศาสตร์",
+                question: "ดาวเคราะห์ดวงใดในระบบสุริยะที่มีขนาดใหญ่ที่สุด?",
+                options: ["ดาวพฤหัสบดี", "ดาวเสาร์", "ดาวเนปจูน", "โลก"],
+                answer: 0,
+                explain: "ดาวพฤหัสบดี เป็นดาวเคราะห์แก๊สยักษ์ที่มีขนาดใหญ่ที่สุด"
+            },
+            {
+                category: "🐾 สัตว์โลกน่ารู้",
+                question: "สัตว์ชนิดใดไม่มีกระดูกสันหลังและมีหัวใจถึง 3 ดวง?",
+                options: ["ปลาหมึกยักษ์", "แมงกะพรุน", "ดาวทะเล", "กุ้งมังกร"],
+                answer: 0,
+                explain: "ปลาหมึกยักษ์ (Octopus) มีหัวใจ 3 ดวงเพื่อสูบฉีดเลือดไปทั่วร่างกาย"
+            },
+            {
+                category: "🧠 ปริศนาเชาวน์",
+                question: "อะไรเอ่ย... ตัวอยู่บ้าน แต่หัวอยู่นอกบ้าน?",
+                options: ["ตะปู", "หลังคา", "หน้าต่าง", "สายไฟ"],
+                answer: 0,
+                explain: "ตะปู! ตัวตะปูถูกตอกจมอยู่ในไม้/ผนัง แต่ส่วนหัวตอกอยู่ข้างนอก"
+            },
+            {
+                category: "🌍 ความรู้รอบตัว",
+                question: "สิ่งก่อสร้างใดจัดเป็น 1 ใน 7 สิ่งมหัศจรรย์ของโลกยุคโบราณที่ยังคงอยู่มาถึงปัจจุบัน?",
+                options: ["มหาพีระมิดแห่งกีซา", "โคลอสเซียม", "กำแพงเมืองจีน", "ทัชมาฮาล"],
+                answer: 0,
+                explain: "มหาพีระมิดแห่งกีซา ในอียิปต์ เป็นสิ่งมหัศจรรย์ยุคโบราณเดียวที่ยังสมบูรณ์"
+            },
+            {
+                category: "🧠 ปริศนาฮาเฮ",
+                question: "อะไรเอ่ย... ยิ่งใส่น้ำ ยิ่งแห้ง?",
+                options: ["ผ้าเช็ดตัว", "ฟองน้ำ", "ดินสอพอง", "กระดาษซับมัน"],
+                answer: 0,
+                explain: "ผ้าเช็ดตัว! เพราะเวลาเราใส่น้ำ (เช็ดตัวหลังอาบน้ำ) ร่างกายเราจะยิ่งแห้ง"
+            }
+        ];
+
+        // --- MONSTER STAGES DATABASE (10 STAGES) ---
+        const MONSTERS = [
+            { name: "สไลม์จอมกวน", avatar: "🟢", maxHp: 100, tag: "🟢 Stage 1: ฝึกหัด" },
+            { name: "ค้างคาวราตรี", avatar: "🦇", maxHp: 120, tag: "🦇 Stage 2: เวหา" },
+            { name: "ก็อบลินตัวจิ๋ว", avatar: "👺", maxHp: 140, tag: "⚡ Stage 3: ว่องไว" },
+            { name: "สเกเลตันกระดูก", avatar: "💀", maxHp: 160, tag: "☠️ Stage 4: อมตะ" },
+            { name: "พฤกษาปีศาจ", avatar: "🪴", maxHp: 180, tag: "🌿 Stage 5: ธรรมชาติ" },
+            { name: "โกเลมหินยักษ์", avatar: "🪨", maxHp: 200, tag: "🛡️ Stage 6: ทรหด" },
+            { name: "วิญญาณหลอน", avatar: "👻", maxHp: 230, tag: "🔮 Stage 7: วิญญาณ" },
+            { name: "ออร์คจอมคลั่ง", avatar: "⚔️", maxHp: 260, tag: "💥 Stage 8: จอมแรง" },
+            { name: "มังกรเพลิงพิโรธ", avatar: "🐉", maxHp: 300, tag: "🔥 Stage 9: มหาภัย" },
+            { name: "ราชาปีศาจทมิฬ", avatar: "👹", maxHp: 350, tag: "👑 Stage 10: จอมมาร" }
+        ];
+
+        // --- HERO TYPES ---
+        const HEROES = {
+            wizard: { name: "ผู้กล้าจอมเวท", avatar: "🧙‍♂️" },
+            knight: { name: "ผู้กล้าอัศวิน", avatar: "⚔️" },
+            ninja: { name: "ผู้กล้านินจา", avatar: "🥷" },
+            archer: { name: "ผู้กล้านายพราน", avatar: "🏹" }
+        };
+
+        // --- GAME STATE VARIABLES ---
+        let currentHeroKey = 'wizard';
+        let currentStageIndex = 0;
+        let currentQuestionIndex = 0;
+        let questionsList = [];
+        
+        let playerHp = 100;
+        let playerMaxHp = 100;
+        
+        let monsterHp = 100;
+        let monsterMaxHp = 100;
+
+        let score = 0;
+        let combo = 0;
+        let correctAnswersCount = 0;
+        let isAnsweringLocked = false;
+
+        // --- DOM ELEMENTS ---
+        const heroSelectOverlay = document.getElementById('heroSelectOverlay');
+        const gameResultOverlay = document.getElementById('gameResultOverlay');
+        const btnStartGame = document.getElementById('btnStartGame');
+        const btnRestart = document.getElementById('btnRestart');
+        const btnMute = document.getElementById('btnMute');
+
+        const playerCard = document.getElementById('playerCard');
+        const playerAvatar = document.getElementById('playerAvatar');
+        const playerName = document.getElementById('playerName');
+        const playerHpBar = document.getElementById('playerHpBar');
+        const playerHpText = document.getElementById('playerHpText');
+
+        const monsterCard = document.getElementById('monsterCard');
+        const monsterAvatar = document.getElementById('monsterAvatar');
+        const monsterName = document.getElementById('monsterName');
+        const monsterHpBar = document.getElementById('monsterHpBar');
+        const monsterHpText = document.getElementById('monsterHpText');
+        const monsterTag = document.getElementById('monsterTag');
+
+        const stageText = document.getElementById('stageText');
+        const scoreText = document.getElementById('scoreText');
+        const comboBadge = document.getElementById('comboBadge');
+        const comboCount = document.getElementById('comboCount');
+
+        const questionCategory = document.getElementById('questionCategory');
+        const questionCounter = document.getElementById('questionCounter');
+        const questionText = document.getElementById('questionText');
+        const feedbackBanner = document.getElementById('feedbackBanner');
+        const feedbackText = document.getElementById('feedbackText');
+        const optionsGrid = document.getElementById('optionsGrid');
+        const optionBtns = document.querySelectorAll('.option-btn');
+        const damageOverlay = document.getElementById('damageOverlay');
+
+        // --- INITIALIZATION ---
+        function initEvents() {
+            // Hero choice selection highlight
+            document.querySelectorAll('.hero-choice-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.hero-choice-btn').forEach(b => {
+                        b.classList.remove('border-cyan-500/50', 'bg-cyan-500/20');
+                        b.classList.add('border-transparent');
+                    });
+                    btn.classList.remove('border-transparent');
+                    btn.classList.add('border-cyan-500/50', 'bg-cyan-500/20');
+                    currentHeroKey = btn.getAttribute('data-hero');
+                });
+            });
+
+            btnStartGame.addEventListener('click', startGame);
+            btnRestart.addEventListener('click', startGame);
+
+            btnMute.addEventListener('click', () => {
+                const isMuted = sound.toggleMute();
+                btnMute.textContent = isMuted ? '🔇' : '🔊';
+            });
+
+            // Option button click listeners
+            optionBtns.forEach((btn, idx) => {
+                btn.addEventListener('click', () => handleAnswer(idx));
+            });
+        }
+
+        // Shuffle Array helper
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // --- START GAME ---
+        function startGame() {
+            sound.init();
+
+            // Set chosen Hero
+            const heroData = HEROES[currentHeroKey] || HEROES.wizard;
+            playerAvatar.textContent = heroData.avatar;
+            playerName.textContent = heroData.name;
+
+            // Reset Game Stats
+            playerHp = 100;
+            playerMaxHp = 100;
+            updatePlayerHpUI();
+
+            score = 0;
+            combo = 0;
+            correctAnswersCount = 0;
+            currentStageIndex = 0;
+            currentQuestionIndex = 0;
+
+            scoreText.textContent = '0';
+            comboBadge.classList.add('hidden');
+
+            // Shuffle Questions & Load Stage 1
+            questionsList = shuffleArray(QUESTION_DATABASE);
+            loadMonsterStage(0);
+
+            // Hide Overlays
+            heroSelectOverlay.classList.add('hidden');
+            gameResultOverlay.classList.add('hidden');
+            isAnsweringLocked = false;
+        }
+
+        // Load Monster for Current Stage
+        function loadMonsterStage(stageIdx) {
+            currentStageIndex = stageIdx;
+            const monsterData = MONSTERS[stageIdx % MONSTERS.length];
+
+            monsterAvatar.textContent = monsterData.avatarChar || monsterData.avatar;
+            monsterName.textContent = monsterData.name;
+            monsterTag.textContent = monsterData.tag;
+
+            monsterMaxHp = monsterData.maxHp;
+            monsterHp = monsterData.maxHp;
+            updateMonsterHpUI();
+
+            stageText.textContent = `${stageIdx + 1} / ${MONSTERS.length}`;
+
+            loadQuestion();
+        }
+
+        // Load Question onto UI
+        function loadQuestion() {
+            if (currentQuestionIndex >= questionsList.length) {
+                // If out of questions, shuffle & repeat
+                questionsList = shuffleArray(QUESTION_DATABASE);
+                currentQuestionIndex = 0;
+            }
+
+            const q = questionsList[currentQuestionIndex];
+            questionCategory.textContent = q.category;
+            questionCounter.textContent = `คำถามที่ ${currentQuestionIndex + 1}/${questionsList.length}`;
+            questionText.textContent = q.question;
+
+            // Prepare answer options (Shuffle options while tracking correct answer)
+            const optionObjects = q.options.map((opt, index) => ({
+                text: opt,
+                isCorrect: index === q.answer
+            }));
+            const shuffledOptions = shuffleArray(optionObjects);
+
+            optionBtns.forEach((btn, i) => {
+                const optObj = shuffledOptions[i];
+                btn.dataset.correct = optObj.isCorrect ? 'true' : 'false';
+                btn.querySelector('.option-text').textContent = optObj.text;
+                
+                // Reset styling
+                btn.className = "option-btn glass-card-light hover:bg-slate-800/80 active:scale-98 transition p-3 sm:p-4 rounded-2xl text-left font-semibold text-sm sm:text-base flex items-center space-x-3 border border-slate-700/60 hover:border-amber-400/50 cursor-pointer";
+                btn.disabled = false;
+            });
+
+            feedbackBanner.classList.add('hidden');
+            isAnsweringLocked = false;
+        }
+
+        // --- ANSWER HANDLING & BATTLE MECHANICS ---
+        function handleAnswer(selectedIndex) {
+            if (isAnsweringLocked) return;
+            isAnsweringLocked = true;
+
+            const selectedBtn = optionBtns[selectedIndex];
+            const isCorrect = selectedBtn.dataset.correct === 'true';
+            const currentQ = questionsList[currentQuestionIndex];
+
+            // Disable all buttons during reaction phase
+            optionBtns.forEach(btn => {
+                btn.disabled = true;
+                btn.classList.remove('hover:border-amber-400/50', 'hover:bg-slate-800/80');
+                
+                // Highlight actual correct answer in green
+                if (btn.dataset.correct === 'true') {
+                    btn.classList.add('border-emerald-500', 'bg-emerald-500/20', 'text-emerald-300');
+                }
+            });
+
+            if (isCorrect) {
+                // CORRECT ANSWER -> PLAYER ATTACKS MONSTER
+                selectedBtn.classList.add('ring-2', 'ring-emerald-400');
+                
+                combo++;
+                correctAnswersCount++;
+                const bonusPoints = 100 + (combo * 25);
+                score += bonusPoints;
+                scoreText.textContent = score;
+
+                if (combo > 1) {
+                    comboBadge.classList.remove('hidden');
+                    comboCount.textContent = combo;
+                }
+
+                sound.playCorrect();
+
+                // Trigger Player Attack Animation & Damage Monster
+                setTimeout(() => {
+                    playerAvatar.classList.add('anim-player-attack');
+                    sound.playAttack();
+
+                    setTimeout(() => {
+                        const dmg = 35 + Math.floor(Math.random() * 10);
+                        monsterHp = Math.max(0, monsterHp - dmg);
+                        updateMonsterHpUI();
+
+                        monsterAvatar.classList.add('anim-hurt');
+                        spawnDamagePopup(monsterCard, `-${dmg}`, '#f43f5e');
+
+                        setTimeout(() => {
+                            playerAvatar.classList.remove('anim-player-attack');
+                            monsterAvatar.classList.remove('anim-hurt');
+                        }, 400);
+                    }, 200);
+
+                }, 100);
+
+                // Show Feedback
+                feedbackBanner.className = "text-center py-2 px-4 rounded-xl font-bold text-xs sm:text-sm bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 animate-fade-in";
+                feedbackText.textContent = `✨ ถูกต้อง! (+${bonusPoints} คะแนน) ${currentQ.explain}`;
+                feedbackBanner.classList.remove('hidden');
+
+            } else {
+                // INCORRECT ANSWER -> MONSTER ATTACKS PLAYER
+                selectedBtn.classList.add('border-rose-500', 'bg-rose-500/20', 'text-rose-300', 'ring-2', 'ring-rose-400');
+                
+                combo = 0;
+                comboBadge.classList.add('hidden');
+                sound.playHurt();
+
+                // Trigger Monster Attack Animation & Hurt Player
+                setTimeout(() => {
+                    monsterAvatar.classList.add('anim-monster-attack');
+
+                    setTimeout(() => {
+                        const dmg = 25 + Math.floor(Math.random() * 10);
+                        playerHp = Math.max(0, playerHp - dmg);
+                        updatePlayerHpUI();
+
+                        playerAvatar.classList.add('anim-hurt');
+                        spawnDamagePopup(playerCard, `-${dmg}`, '#ef4444');
+
+                        setTimeout(() => {
+                            monsterAvatar.classList.remove('anim-monster-attack');
+                            playerAvatar.classList.remove('anim-hurt');
+                        }, 400);
+                    }, 200);
+
+                }, 100);
+
+                // Show Feedback
+                feedbackBanner.className = "text-center py-2 px-4 rounded-xl font-bold text-xs sm:text-sm bg-rose-500/20 border border-rose-500/40 text-rose-300 animate-fade-in";
+                feedbackText.textContent = `❌ ยังไม่ถูกต้อง! ${currentQ.explain}`;
+                feedbackBanner.classList.remove('hidden');
+            }
+
+            // NEXT STEP TIMEOUT
+            setTimeout(() => {
+                currentQuestionIndex++;
+
+                // Check Win/Loss conditions
+                if (monsterHp <= 0) {
+                    // Defeated current monster!
+                    if (currentStageIndex + 1 < MONSTERS.length) {
+                        // Advance to next monster stage!
+                        loadMonsterStage(currentStageIndex + 1);
+                    } else {
+                        // DEFEATED ALL MONSTERS -> GAME VICTORY!
+                        showGameResult(true);
+                    }
+                } else if (playerHp <= 0) {
+                    // PLAYER DEFEATED -> GAME OVER!
+                    showGameResult(false);
+                } else {
+                    // Continue to next question
+                    loadQuestion();
+                }
+
+            }, 2000);
+        }
+
+        // --- HP UI UPDATES ---
+        function updatePlayerHpUI() {
+            const pct = Math.max(0, (playerHp / playerMaxHp) * 100);
+            playerHpBar.style.width = `${pct}%`;
+            playerHpText.textContent = `${playerHp}/${playerMaxHp}`;
+        }
+
+        function updateMonsterHpUI() {
+            const pct = Math.max(0, (monsterHp / monsterMaxHp) * 100);
+            monsterHpBar.style.width = `${pct}%`;
+            monsterHpText.textContent = `${monsterHp}/${monsterMaxHp}`;
+        }
+
+        // Floating Damage Numbers
+        function spawnDamagePopup(containerEl, text, color) {
+            const rect = containerEl.getBoundingClientRect();
+            const pop = document.createElement('div');
+            pop.className = 'absolute font-black text-2xl sm:text-3xl damage-popup pointer-events-none z-40';
+            pop.style.left = `${rect.width / 2 - 20}px`;
+            pop.style.top = `${rect.height / 2 - 30}px`;
+            pop.style.color = color;
+            pop.textContent = text;
+            containerEl.appendChild(pop);
+
+            setTimeout(() => {
+                pop.remove();
+            }, 850);
+        }
+
+        // --- GAME END RESULT (VICTORY / DEFEAT) ---
+        function showGameResult(isVictory) {
+            const resultIconBox = document.getElementById('resultIconBox');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultSubtext = document.getElementById('resultSubtext');
+            const finalScore = document.getElementById('finalScore');
+            const finalAccuracy = document.getElementById('finalAccuracy');
+            const finalRank = document.getElementById('finalRank');
+
+            finalScore.textContent = score;
+            finalAccuracy.textContent = `${correctAnswersCount} / ${currentQuestionIndex}`;
+
+            if (isVictory) {
+                sound.playVictory();
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+
+                resultIconBox.className = "w-20 h-20 mx-auto bg-emerald-500/20 border border-emerald-500/40 rounded-3xl flex items-center justify-center text-5xl mb-3 shadow-lg shadow-emerald-500/20";
+                resultIconBox.textContent = "🏆";
+                resultTitle.textContent = "ชัยชนะอันยิ่งใหญ่!";
+                resultTitle.className = "text-3xl font-black mb-1 text-emerald-400 glow-gold";
+                resultSubtext.textContent = "คุณปราบมอนสเตอร์ทั้ง 10 ด่าน และพิชิตแดนคำถามสำเร็จ!";
+
+                // Rank calculation
+                if (correctAnswersCount >= 20) finalRank.textContent = "🏆 SS: ตำนานแห่งมหาปัญญา";
+                else if (correctAnswersCount >= 14) finalRank.textContent = "🌟 S: จอมเวททรงปัญญา";
+                else if (correctAnswersCount >= 8) finalRank.textContent = "⚔️ A: ผู้กล้าปัญญาเลิศ";
+                else finalRank.textContent = "🛡️ B: ผู้กล้าฝึกหัด";
+
+            } else {
+                sound.playDefeat();
+                resultIconBox.className = "w-20 h-20 mx-auto bg-rose-500/20 border border-rose-500/40 rounded-3xl flex items-center justify-center text-5xl mb-3 shadow-lg shadow-rose-500/20";
+                resultIconBox.textContent = "💀";
+                resultTitle.textContent = "ผู้กล้าพ่ายแพ้!";
+                resultTitle.className = "text-3xl font-black mb-1 text-rose-400";
+                resultSubtext.textContent = "พลังชีวิตหมดลงก่อนจะปราบมอนสเตอร์ได้สำเร็จ... ลองใหม่อีกครั้ง!";
+                finalRank.textContent = "🛡️ นักรบผู้พยายาม";
+            }
+
+            gameResultOverlay.classList.remove('hidden');
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', initEvents);
+    </script>
+</body>
+</html>
